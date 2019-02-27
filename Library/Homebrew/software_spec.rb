@@ -29,7 +29,7 @@ class SoftwareSpec
   def_delegators :@resource, :download_name, :cached_download, :clear_cache
   def_delegators :@resource, :checksum, :mirrors, :specs, :using
   def_delegators :@resource, :version, :mirror, *Checksum::TYPES
-  def_delegators :@resource, :downloader
+  def_delegators :@resource, :downloader, :ipfs
 
   def initialize
     @resource = Resource.new

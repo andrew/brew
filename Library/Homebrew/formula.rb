@@ -2189,6 +2189,10 @@ class Formula
       stable.mirror(val)
     end
 
+    def ipfs(hash)
+      stable.ipfs(hash)
+    end
+
     # @!attribute [w] sha256
     # @scope class
     # To verify the cached download's integrity and security we verify the

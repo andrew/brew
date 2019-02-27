@@ -21,12 +21,21 @@ class Resource
     @name = name
     @url = nil
     @version = nil
+    @ipfs = nil
     @mirrors = []
     @specs = {}
     @checksum = nil
     @using = nil
     @patches = []
     instance_eval(&block) if block_given?
+  end
+
+  def ipfs(hash = nil)
+    return @ipfs if hash.nil?
+
+    @ipfs = hash
+    @using =  :ipfs
+    @download_strategy = DownloadStrategyDetector.detect(url, using)
   end
 
   def owner=(owner)
@@ -36,7 +45,7 @@ class Resource
 
   def downloader
     @downloader ||= download_strategy.new(url, download_name, version,
-                                          mirrors: mirrors.dup, **specs)
+                                          mirrors: mirrors.dup, ipfs: ipfs, **specs)
   end
 
   # Removes /s from resource names; this allows go package names

@@ -271,6 +271,19 @@ class AbstractFileDownloadStrategy < AbstractDownloadStrategy
   end
 end
 
+class IpfsDownloadStrategy < AbstractFileDownloadStrategy
+  def initialize(url, name, version, **meta)
+    super
+    @hash = meta[:ipfs]
+  end
+
+  def fetch
+    ohai "Fetching #{@hash} from IPFS"
+    system_command! '/usr/local/bin/ipfs', args: ["get", @hash, '-o', cached_location]
+    super
+  end
+end
+
 class CurlDownloadStrategy < AbstractFileDownloadStrategy
   attr_reader :mirrors
 
@@ -1117,6 +1130,7 @@ class DownloadStrategyDetector
     when :cvs                    then CVSDownloadStrategy
     when :post                   then CurlPostDownloadStrategy
     when :fossil                 then FossilDownloadStrategy
+    when :ipfs                   then IpfsDownloadStrategy
     else
       raise "Unknown download strategy #{symbol} was requested."
     end
