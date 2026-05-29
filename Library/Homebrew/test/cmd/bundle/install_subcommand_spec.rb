@@ -8,7 +8,7 @@ require "bundle/skipper"
 RSpec.describe Homebrew::Cmd::Bundle::InstallSubcommand do
   subject(:install_subcommand) do
     klass.new(
-      args_for_subcommand(:install, quiet?: false, global?: global, cleanup?: false),
+      args_for_subcommand(:install, quiet?: false, global?: global, cleanup?: false, force_cleanup?: false),
       context: bundle_subcommand_context(:install, global:),
     )
   end
@@ -114,6 +114,62 @@ RSpec.describe Homebrew::Cmd::Bundle::InstallSubcommand do
 
       expect(Homebrew::Bundle).to receive(:mark_as_installed_on_request!)
       install_subcommand.run
+    end
+
+    it "asks before cleaning up when HOMEBREW_ASK is set" do
+      args = args_for_subcommand(:install, quiet?: false, global?: false, cleanup?: true, force_cleanup?: false)
+      context = bundle_subcommand_context(:install, ask: true)
+      subcommand = klass.new(args, context:)
+      allow(Homebrew::Bundle::Installer).to receive(:install!).and_return(true)
+      allow(Homebrew::Bundle).to receive(:mark_as_installed_on_request!)
+      allow_any_instance_of(Pathname).to receive(:read).and_return("brew 'test_formula'")
+
+      expect(Homebrew::Cmd::Bundle::CleanupSubcommand).to receive(:cleanup).with(
+        global: false, file: nil, zap: false, force: false, ask: true, dsl: anything,
+      )
+
+      subcommand.run
+    end
+
+    it "force cleans up when --force-cleanup is passed" do
+      args = args_for_subcommand(:install, quiet?: false, global?: false, cleanup?: false, force_cleanup?: true)
+      subcommand = klass.new(args, context: bundle_subcommand_context(:install, ask: true))
+      allow(Homebrew::Bundle::Installer).to receive(:install!).and_return(true)
+      allow(Homebrew::Bundle).to receive(:mark_as_installed_on_request!)
+      allow_any_instance_of(Pathname).to receive(:read).and_return("brew 'test_formula'")
+
+      expect(Homebrew::Cmd::Bundle::CleanupSubcommand).to receive(:cleanup).with(
+        global: false, file: nil, zap: false, force: true, ask: true, dsl: anything,
+      )
+
+      subcommand.run
+    end
+
+    it "force cleans up when --force and --cleanup are passed" do
+      args = args_for_subcommand(:install, quiet?: false, global?: false, cleanup?: true, force_cleanup?: false)
+      subcommand = klass.new(args, context: bundle_subcommand_context(:install, force: true))
+      allow(Homebrew::Bundle::Installer).to receive(:install!).and_return(true)
+      allow(Homebrew::Bundle).to receive(:mark_as_installed_on_request!)
+      allow_any_instance_of(Pathname).to receive(:read).and_return("brew 'test_formula'")
+
+      expect(Homebrew::Cmd::Bundle::CleanupSubcommand).to receive(:cleanup).with(
+        global: false, file: nil, zap: false, force: true, ask: false, dsl: anything,
+      )
+
+      subcommand.run
+    end
+
+    it "rejects --cleanup without force or ask" do
+      args = args_for_subcommand(:install, quiet?: false, global?: false, cleanup?: true, force_cleanup?: false)
+      expect { klass.new(args, context: bundle_subcommand_context(:install)).run }
+        .to raise_error(UsageError, /requires `--force`, `--force-cleanup` or `\$HOMEBREW_ASK`/)
+    end
+
+    it "rejects --zap without a cleanup flag" do
+      args = args_for_subcommand(:install, quiet?: false, global?: false, cleanup?: false, force_cleanup?: false,
+                                           zap?: true)
+      expect { klass.new(args, context: bundle_subcommand_context(:install)).run }
+        .to raise_error(UsageError, /`--zap` cannot be passed without `--cleanup` or `--force-cleanup`/)
     end
   end
 end

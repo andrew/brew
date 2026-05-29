@@ -11,11 +11,24 @@ RSpec.describe Homebrew::Cmd::Bundle do
   it_behaves_like "parseable arguments"
 
   it "handles default install subcommand options", :aggregate_failures do
-    with_env("HOMEBREW_BUNDLE_INSTALL_CLEANUP" => nil) do
+    with_env("HOMEBREW_BUNDLE_INSTALL_CLEANUP" => nil, "HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP" => nil) do
       expect(klass.new([]).args.subcommand).to eq("install")
       expect(klass.new(%w[--cleanup --zap]).args.subcommand).to eq("install")
-      expect { klass.new(%w[--zap]) }
-        .to raise_error(UsageError, /`--zap` cannot be passed without `--cleanup`/)
+      expect(klass.new(%w[--force-cleanup --zap]).args.subcommand).to eq("install")
+    end
+  end
+
+  it "maps bundle cleanup environment variables to install options", :aggregate_failures do
+    with_env("HOMEBREW_BUNDLE_INSTALL_CLEANUP" => "1", "HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP" => nil) do
+      args = klass.new(["--global"]).args
+      expect(args.cleanup?).to be(true)
+      expect(args.force_cleanup?).to be(false)
+    end
+
+    with_env("HOMEBREW_BUNDLE_INSTALL_CLEANUP" => nil, "HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP" => "1") do
+      args = klass.new(["--global"]).args
+      expect(args.cleanup?).to be(false)
+      expect(args.force_cleanup?).to be(true)
     end
   end
 
@@ -38,6 +51,25 @@ RSpec.describe Homebrew::Cmd::Bundle do
     end
   end
 
+  it "tracks ask mode in the subcommand context" do
+    args = klass.new(%w[cleanup]).args
+    context = klass.context(args, extensions: Homebrew::Cmd::Bundle::BUNDLE_EXTENSIONS, ask: true)
+
+    expect(context.ask).to be(true)
+  end
+
+  it "lets HOMEBREW_NO_ASK disable env-driven ask mode" do
+    with_env(HOMEBREW_ASK: "1", HOMEBREW_NO_ASK: "1") do
+      args = klass.new(%w[cleanup]).args
+      expect(Homebrew::Cmd::Bundle::CleanupSubcommand).to receive(:new) do |_, context:|
+        expect(context.ask).to be(false)
+        instance_double(Homebrew::Cmd::Bundle::CleanupSubcommand, run: nil)
+      end
+
+      klass.dispatch(args, extensions: Homebrew::Cmd::Bundle::BUNDLE_EXTENSIONS)
+    end
+  end
+
   it "accepts global flags on subcommands that do not re-declare them", :aggregate_failures do
     expect(klass.new(%w[cleanup --verbose]).args.verbose?).to be(true)
     expect(klass.new(%w[cleanup -v]).args.verbose?).to be(true)
@@ -48,6 +80,12 @@ RSpec.describe Homebrew::Cmd::Bundle do
   it "uses subcommand-specific option descriptions", :aggregate_failures do
     subcommand_options = ->(subcommand) { Commands.command_options("bundle", subcommand:).to_h }
 
+    expect(subcommand_options.call("install")["--cleanup"])
+      .to include("Requires `--force`, `--force-cleanup` or `$HOMEBREW_ASK`")
+    expect(subcommand_options.call("install")).not_to have_key("--ask")
+    expect(subcommand_options.call("install")["--force-cleanup"])
+      .to include("`$HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP`")
+    expect(subcommand_options.call("install")["--cleanup"]).not_to include("`$HOMEBREW_BUNDLE_INSTALL_CLEANUP`")
     expect(subcommand_options.call("list")["--vscode"]).to eq("List VSCode (and forks/variants) extensions.")
     expect(subcommand_options.call("dump")["--vscode"]).to eq("Dump VSCode (and forks/variants) extensions.")
     expect(subcommand_options.call("cleanup")["--vscode"]).to eq("Clean up VSCode (and forks/variants) extensions.")

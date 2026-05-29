@@ -101,6 +101,15 @@ module Homebrew
         description:  "Use this as the browser when opening project homepages.",
         default_text: "`$BROWSER` or the OS's default browser.",
       },
+      HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP:     {
+        description: "If set, run `brew bundle cleanup --force` after `brew bundle install`.",
+        boolean:     true,
+      },
+      HOMEBREW_BUNDLE_INSTALL_CLEANUP:           {
+        description: "If set, run `brew bundle cleanup` after `brew bundle install`.",
+        boolean:     true,
+        hidden:      true,
+      },
       HOMEBREW_BUNDLE_USER_CACHE:                {
         description: "If set, use this directory as the `bundle`(1) user cache.",
       },

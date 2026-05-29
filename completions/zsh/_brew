@@ -740,10 +740,11 @@ list)
         ;;
 install|upgrade)
         _arguments \
-          '--cleanup[Perform cleanup after installing dependencies, same as running `cleanup --force`. Enabled by default if `$HOMEBREW_BUNDLE_INSTALL_CLEANUP` is set and `--global` is passed]' \
+          '--cleanup[Ask to perform cleanup after installing dependencies. Requires `--force`, `--force-cleanup` or `$HOMEBREW_ASK`]' \
           '--debug[Display any debugging information]' \
           '(--global)--file[Read from or write to the `Brewfile` from this location. Use `--file=-` to pipe to stdin/stdout]' \
           '--force[Run with `--force`/`--overwrite`]' \
+          '--force-cleanup[Perform cleanup after installing dependencies without asking. Enabled by default if `$HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP` is set and `--global` is passed]' \
           '(--file)--global[Read from or write to the `Brewfile` from `$HOMEBREW_BUNDLE_FILE_GLOBAL` (if set), `${XDG_CONFIG_HOME}/homebrew/Brewfile` (if `$XDG_CONFIG_HOME` is set), `~/.homebrew/Brewfile` or `~/.Brewfile` otherwise]' \
           '--help[Show this message]' \
           '--jobs[Run up to this many formula installations in parallel. Defaults to 1 (sequential). Use `auto` for the number of CPU cores (max 4)]' \

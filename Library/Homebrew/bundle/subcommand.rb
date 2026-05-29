@@ -4,6 +4,7 @@
 require "abstract_subcommand"
 require "bundle/extensions/extension"
 require "cli/parser"
+require "env_config"
 require "etc"
 require "bundle/subcommand_context"
 require "utils/output"
@@ -25,6 +26,8 @@ module Homebrew
           ).void
         }
         def dispatch(args, extensions:)
+          ask = Homebrew::EnvConfig.ask? && !Homebrew::EnvConfig.no_ask?
+
           # Don't want to ask for input in Bundle
           ENV["HOMEBREW_ASK"] = nil
 
@@ -34,7 +37,7 @@ module Homebrew
             ENV["HOMEBREW_BUNDLE_DESCRIBE"] = dump_describe
           end
 
-          context = context(args, extensions:)
+          context = context(args, extensions:, ask:)
           Homebrew::Bundle.upgrade_formulae = args.upgrade_formulae
 
           if args.install?
@@ -55,9 +58,10 @@ module Homebrew
           params(
             args:       T.untyped,
             extensions: T::Array[T.class_of(Homebrew::Bundle::Extension)],
+            ask:        T::Boolean,
           ).returns(SubcommandContext)
         }
-        def context(args, extensions:)
+        def context(args, extensions:, ask: false)
           subcommand = T.let(args.subcommand || "install", String)
           jobs_arg = args.jobs || ENV.fetch("HOMEBREW_BUNDLE_JOBS", nil)
           jobs = if jobs_arg == "auto"
@@ -78,6 +82,7 @@ module Homebrew
             no_upgrade:,
             verbose:      args.verbose?,
             force:        args.force?,
+            ask:,
             jobs:         [jobs, 1].max,
             zap:          args.zap?,
             no_type_args: no_type_args?(args, extensions:),

@@ -42,16 +42,29 @@ module Homebrew
           switch "-f", "--force",
                  description: "Run with `--force`/`--overwrite`."
           switch "--cleanup",
-                 description: "Perform cleanup after installing dependencies, same as running `cleanup --force`.",
+                 description: "Ask to perform cleanup after installing dependencies. Requires `--force`, " \
+                              "`--force-cleanup` or `$HOMEBREW_ASK`.",
                  env:         [:bundle_install_cleanup, "--global"]
+          switch "--force-cleanup",
+                 description: "Perform cleanup after installing dependencies without asking.",
+                 env:         [:bundle_force_install_cleanup, "--global"]
           switch "--zap",
                  description: "Use `zap` instead of `uninstall` when cleaning up casks after " \
-                              "installing dependencies.",
-                 depends_on:  "--cleanup"
+                              "installing dependencies."
         end
 
         sig { override.void }
         def run
+          if args.zap? && !args.cleanup? && !args.force_cleanup?
+            raise UsageError, "`--zap` cannot be passed without `--cleanup` or `--force-cleanup`."
+          end
+
+          if args.cleanup? && !context.force && !args.force_cleanup? && !context.ask
+            raise UsageError, "`brew bundle install --cleanup` requires `--force`, `--force-cleanup` " \
+                              "or `$HOMEBREW_ASK`."
+          end
+          # odeprecated "HOMEBREW_BUNDLE_INSTALL_CLEANUP", "HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP"
+
           @dsl = Homebrew::Bundle::Brewfile.read(global: context.global, file: context.file)
           result = Homebrew::Bundle::Installer.install!(
             @dsl.entries,
@@ -73,11 +86,7 @@ module Homebrew
 
           return unless cleanup
 
-          cleanup_requested = if ENV.fetch("HOMEBREW_BUNDLE_INSTALL_CLEANUP", nil)
-            args.global?
-          else
-            args.cleanup?
-          end
+          cleanup_requested = args.force_cleanup? || args.cleanup?
           return unless cleanup_requested
 
           require "bundle/subcommand/cleanup"
@@ -85,7 +94,9 @@ module Homebrew
           # Don't need to reset cleanup specifically but this resets all the dumper modules.
           Homebrew::Cmd::Bundle::CleanupSubcommand.reset!
           Homebrew::Cmd::Bundle::CleanupSubcommand.cleanup(
-            global: context.global, file: context.file, zap: context.zap, force: true, dsl:,
+            global: context.global, file: context.file, zap: context.zap,
+            force: context.force || args.force_cleanup?,
+            ask: context.ask, dsl:
           )
         end
 

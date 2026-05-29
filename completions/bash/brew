@@ -758,6 +758,7 @@ install)
         --debug
         --file
         --force
+        --force-cleanup
         --global
         --help
         --jobs

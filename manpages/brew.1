@@ -237,7 +237,10 @@ Run up to this many formula installations in parallel\. Defaults to 1 (sequentia
 Run with \fB\-\-force\fP/\fB\-\-overwrite\fP\&\.
 .TP
 \fB\-\-cleanup\fP
-Perform cleanup after installing dependencies, same as running \fBcleanup \-\-force\fP\&\. Enabled by default if \fB$HOMEBREW_BUNDLE_INSTALL_CLEANUP\fP is set and \fB\-\-global\fP is passed\.
+Ask to perform cleanup after installing dependencies\. Requires \fB\-\-force\fP, \fB\-\-force\-cleanup\fP or \fB$HOMEBREW_ASK\fP\&\.
+.TP
+\fB\-\-force\-cleanup\fP
+Perform cleanup after installing dependencies without asking\. Enabled by default if \fB$HOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP\fP is set and \fB\-\-global\fP is passed\.
 .TP
 \fB\-\-zap\fP
 Use \fBzap\fP instead of \fBuninstall\fP when cleaning up casks after installing dependencies\.
@@ -2905,6 +2908,9 @@ Use this as the \fBbat\fP theme for syntax highlighting\.
 .P
 \fIDefault:\fP \fB$BAT_THEME\fP\&\.
 .RE
+.TP
+\fBHOMEBREW_BUNDLE_FORCE_INSTALL_CLEANUP\fP
+If set, run \fBbrew bundle cleanup \-\-force\fP after \fBbrew bundle install\fP\&\.
 .TP
 \fBHOMEBREW_BOTTLE_DOMAIN\fP
 Use this URL as the download mirror for bottles\. If bottles at that URL are temporarily unavailable, the default bottle domain will be used as a fallback mirror\. For example, \fBexport HOMEBREW_BOTTLE_DOMAIN=http://localhost:8080\fP will cause all bottles to download from the prefix \fBhttp://localhost:8080/\fP\&\. If bottles are not available at \fB$HOMEBREW_BOTTLE_DOMAIN\fP they will be downloaded from the default bottle domain\.

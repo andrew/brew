@@ -14,6 +14,7 @@ module Homebrew
         const :no_upgrade, T::Boolean
         const :verbose, T::Boolean
         const :force, T::Boolean
+        const :ask, T::Boolean
         const :jobs, Integer
         const :zap, T::Boolean
         const :no_type_args, T::Boolean

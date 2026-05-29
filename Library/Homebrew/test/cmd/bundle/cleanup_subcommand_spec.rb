@@ -9,6 +9,28 @@ RSpec.describe Homebrew::Cmd::Bundle::CleanupSubcommand do
   let(:klass) { Homebrew::Cmd::Bundle::CleanupSubcommand }
 
   describe "#run" do
+    it "asks before cleanup unless --force is passed" do
+      args = args_for_subcommand(:cleanup, all?: false, formulae?: false, casks?: false, taps?: false, mas?: false,
+                                           vscode?: false, cargo?: false, flatpak?: false, go?: false, krew?: false,
+                                           npm?: false, uv?: false)
+      context = bundle_subcommand_context(:cleanup)
+
+      expect(klass).to receive(:cleanup).with(hash_including(ask: true, force: false))
+
+      klass.new(args, context:).run
+    end
+
+    it "does not ask before cleanup when --force is passed" do
+      args = args_for_subcommand(:cleanup, all?: false, formulae?: false, casks?: false, taps?: false, mas?: false,
+                                           vscode?: false, cargo?: false, flatpak?: false, go?: false, krew?: false,
+                                           npm?: false, uv?: false)
+      context = bundle_subcommand_context(:cleanup, force: true)
+
+      expect(klass).to receive(:cleanup).with(hash_including(ask: false, force: true))
+
+      klass.new(args, context:).run
+    end
+
     it "cleans up every supported type when --all is passed" do
       args = args_for_subcommand(:cleanup, all?: true, formulae?: false, casks?: false, taps?: false, mas?: false,
                                            vscode?: false, cargo?: false, flatpak?: false, go?: false, krew?: false,
@@ -392,6 +414,21 @@ RSpec.describe Homebrew::Cmd::Bundle::CleanupSubcommand do
         klass.cleanup
       end.to raise_error(SystemExit)
         .and output(output_pattern).to_stdout
+    end
+
+    it "prompts and cleans up when asking" do
+      allow($stdin).to receive_messages(getch: "y", tty?: true)
+      allow($stdout).to receive(:tty?).and_return(true)
+      allow(Homebrew::Bundle).to receive(:mark_as_installed_on_request!)
+      allow(Kernel).to receive(:system)
+      allow(klass).to receive(:system_output_no_stderr).and_return("")
+      expect(Formatter).to receive(:columns).with(%w[a b]).exactly(5).times.and_return("a b")
+      expect(Kernel).to receive(:system).with(HOMEBREW_BREW_FILE, "uninstall", "--cask", "--force", "a", "b")
+      expect(Kernel).to receive(:system).with(HOMEBREW_BREW_FILE, "uninstall", "--formula", "--force", "a", "b")
+      expect(Kernel).to receive(:system).with(HOMEBREW_BREW_FILE, "untap", "a", "b")
+      expect(Homebrew::Cleanup).to receive(:dry_run_output).and_return("")
+
+      expect { klass.cleanup(ask: true) }.not_to raise_error
     end
   end
 
