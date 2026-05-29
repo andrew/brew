@@ -6,3 +6,7 @@ self-hosted-runner:
 # Empty array means no configuration variable is allowed.
 config-variables:
   - BREW_COMMIT_APP_ID
+paths:
+  "**/.github/workflows/tests.yml":
+    ignore:
+      - unknown permission scope "code-quality"

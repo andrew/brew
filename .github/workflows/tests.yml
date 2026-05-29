@@ -212,6 +212,10 @@ jobs:
     needs: syntax
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
+    permissions:
+      contents: read
+      code-quality: write
+      pull-requests: read
     strategy:
       fail-fast: false
       matrix:
@@ -320,6 +324,12 @@ jobs:
           files: Library/Homebrew/test/coverage/coverage.xml
           disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3 # v1
+        with:
+          file: ${{ steps.set-up-homebrew.outputs.repository-path }}/Library/Homebrew/test/coverage/coverage.xml
+          language: Ruby
+          label: code-coverage/simplecov
 
   test-bot:
     name: ${{ matrix.name }}
