@@ -509,6 +509,19 @@ class Tap
     Tap.clear_cache
 
     $stderr.ohai "Tapping #{name}" unless quiet
+    worktree_source_tap_path = T.let(nil, T.nilable(Pathname))
+    if (core_tap? || core_cask_tap?) && (git_file = HOMEBREW_REPOSITORY/".git").file? &&
+       (git_dir = git_file.read[/\Agitdir: (.+)\n?\z/, 1])
+      git_dir_path = Pathname(git_dir)
+      git_dir_path = HOMEBREW_REPOSITORY/git_dir_path unless git_dir_path.absolute?
+      # A linked worktree points at `<source>/.git/worktrees/<name>`, so use
+      # the matching source tap when it is already checked out there.
+      if git_dir_path.dirname.dirname.basename.to_s == ".git"
+        candidate_source_tap_path = git_dir_path.dirname.dirname.dirname/"Library/Taps/#{full_name.downcase}"
+        worktree_source_tap_path = candidate_source_tap_path if (candidate_source_tap_path/".git").exist?
+      end
+    end
+
     args =  %W[clone #{requested_remote} #{path}]
 
     # Override possible user configs like:
@@ -522,7 +535,15 @@ class Tap
     args << "--config" << "core.fsmonitor=false"
 
     begin
-      safe_system "git", *args
+      if worktree_source_tap_path
+        # Keep core and cask taps connected to the same local source checkout as brew.
+        worktree_args = ["-C", worktree_source_tap_path, "worktree", "add"]
+        worktree_args << "--quiet" if quiet
+        worktree_args += ["--detach", path, "HEAD"]
+        safe_system "git", *worktree_args
+      else
+        safe_system "git", *args
+      end
 
       if verify && !Homebrew::EnvConfig.developer? && !Readall.valid_tap?(self, aliases: true)
         raise "Cannot tap #{name}: invalid syntax in tap!"
